@@ -1,0 +1,10 @@
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\bin\Debug\Analyz_EKG.exe.config
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\bin\Debug\Analyz_EKG.exe
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\bin\Debug\Analyz_EKG.pdb
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.csprojAssemblyReference.cache
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.Form1.resources
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.Properties.Resources.resources
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.csproj.GenerateResource.cache
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.csproj.CoreCompileInputs.cache
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.exe
+C:\Users\Marina\Desktop\диплом\Analyz_EKG\Analyz_EKG\obj\Debug\Analyz_EKG.pdb
