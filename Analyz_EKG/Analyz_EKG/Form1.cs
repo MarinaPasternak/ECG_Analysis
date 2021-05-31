@@ -21,14 +21,26 @@ namespace Analyz_EKG
     {
         string csv_file_path = @"C:\Users\Marina\Desktop\диплом\ECG_Analysis\Analyz_EKG\data.csv";
         int[] dataECG;
-        double[] dataForExamination;
-        double[] dataForExaminationWithNoise;
+
+        double[] dataForExamination; //обрані 500 точок
+        double[] dataForExaminationWithNoise; // сигнал із шумом
+        double[] dij;
+
+        double R_2;
+        double T;
+
         int[] step;
+        double[] wavlet;
+        double[] wavletInversHard;
+        double[] wavletInversSoft;
+        double[] deNoisedSignalHard;
+        double[] deNoisedSignalSoft;
+
         static int n = 500; // к-во точек
         int m = 4; //уровень дистуктеризации
-        double R_2 = Math.Pow(2*Math.Log(n),(1/2));
 
-
+        //hard threshold
+        //soft threshold
 
         public Form1()
         {
@@ -37,11 +49,12 @@ namespace Analyz_EKG
 
         public int parentKsiFunction(double x) 
         {
-            if (x >= 0 && x < 1 / 2)
+            if (0 <= x && x <= 0.5)
             {
                 return 1;
             }
-            else if (x >=1 /2 && x < 1) 
+
+            else if (0.5 < x && x <= 1)
             {
                 return -1;
             }
@@ -49,17 +62,23 @@ namespace Analyz_EKG
             return 0;
         }
 
-        public double[] ksiFunction(int[] t) 
+        public double[] ksiFunction(int k, int j) 
         {
-            double[] results = new double[t.Length];
-            int j = 0;
-            for (j = 0; j < Math.Pow(2,4); j++) 
+            double[] result = new double[n];
+            double[] x = new double[n];
+            int i = 0;
+
+            for (i = 0; i < x.Length; i++)
             {
-                results[j] = Math.Pow(2, m / 2) * parentKsiFunction(Math.Pow(2,m)-j);
+                x[i] = i * 0.001;
             }
 
-            return results;
-            
+            for (i = 0; i < x.Length; i++)
+            {
+                result[i] = (Math.Pow(2, j / 2)) * parentKsiFunction(Math.Pow(2, j) * x[i] - k);
+            }
+            return result;
+
         }
 
         public int[] readECGData() 
@@ -83,7 +102,7 @@ namespace Analyz_EKG
 
             for (i = 0; i < lengthArray; i++)
             {
-                if (numsArray[i] < min) {
+                if (numsArray[i] <= min) {
                     min = numsArray[i];
                 }
             }
@@ -91,6 +110,104 @@ namespace Analyz_EKG
             return min;
         }
 
+        public double[] bubbleSort(double[] array) 
+        {
+            double temp;
+            int i = 0;
+
+            for (i = 0; i < array.Length - 1; i++)
+            {
+                for (int j = i + 1; j < array.Length; j++)
+                {
+                    if (array[i] > array[j])
+                    {
+                        temp = array[i];
+                        array[i] = array[j];
+                        array[j] = temp;
+                    }
+                }
+            }
+
+            return array;
+        }
+
+        public double median(double[] array)
+        {
+            return array[array.Length/2];
+        }
+
+        public void feelTable(double[] wavlet, double[] dij, double[] signal, double[] denoisedHard)
+        {
+            int i = 0;
+
+            dataGridView1.RowCount = n;
+            dataGridView1.ColumnCount = 5;
+
+            dataGridView1.Columns[0].HeaderText = "ЕКГ";
+            dataGridView1.Columns[1].HeaderText = "Вейвлет Хаара";
+            dataGridView1.Columns[2].HeaderText = "dij";
+            dataGridView1.Columns[3].HeaderText = "Жорсткий поріг";
+
+            for (i = 0; i < n; i++)
+            {
+                dataGridView1.Rows[i].Cells[0].Value = signal[i];
+                dataGridView1.Rows[i].Cells[1].Value = wavlet[i];
+            }
+
+            for (i = 0; i < dij.Length; i++)
+            {
+                dataGridView1.Rows[i].Cells[2].Value = dij[i];
+            }
+
+
+            for (i = 0; i < denoisedHard.Length; i++)
+            {
+                dataGridView1.Rows[i].Cells[3].Value = denoisedHard[i];
+            }
+
+
+        }
+
+        public void wavletHaarForward() 
+        {
+            wavlet = new double[n];
+            dij = new double[n/2];
+
+            Array.Copy(dataForExaminationWithNoise, 0, wavlet, 0, dataForExaminationWithNoise.Length);
+            
+            IWavelet wavelet = new Accord.Math.Wavelets.Haar(m);
+            WaveletTransform target = new WaveletTransform(wavelet);
+            wavelet.Forward(wavlet);
+
+            Array.Copy(wavlet, n/2, dij, 0, dij.Length/2);
+        }
+
+        public void wavletHaartInverse(double[] array) 
+        {
+            deNoisedSignalHard = new double[array.Length];
+
+            Array.Copy(array, 0, deNoisedSignalHard, 0, array.Length);
+            IWavelet wavelet = new Accord.Math.Wavelets.Haar(m);
+            WaveletTransform target = new WaveletTransform(wavelet);
+            wavelet.Backward(deNoisedSignalHard);
+        }
+
+        public double[] hardThreshold(double T, double[] array)
+        {
+            List<double> result = new List<double>();
+            int i = 0;
+
+            for (i = 0; i < array.Length; i++) {
+                if (array[i] > T) 
+                {
+                    result.Add(array[i]);
+                }
+            
+            }
+
+            return result.ToArray();
+        
+        }
 
         private void generateDataBtn_Click_1(object sender, EventArgs e)
         {
@@ -101,71 +218,83 @@ namespace Analyz_EKG
             int b = a + n;
             int i = 0;
 
-            dataGridView1.RowCount = b - a;
-            dataGridView1.ColumnCount = 1;
-            
-            dataForExamination = new double[b - a];
-            dataForExaminationWithNoise = new double[b - a];
-            double[] noise = new double[b-a];
+            double[] noise = new double[n];
+            dataForExamination = new double[n];
+            dataForExaminationWithNoise = new double[n];
 
 
-            step = new int[b - a];
+            step = new int[n];
             
             for (i = a; i < b; i++)
             {
                 step[j] = i;
-                noise[j] = 2*(randomNum.Next(500, 1000) - 0.5);
+                noise[j] = (randomNum.Next(500, 1000) - 0.5)* randomNum.Next(0, 3);
                 j++;
             }
 
 
             dataECG = readECGData();
-            Array.Copy(dataECG, a, dataForExamination, 0, b - a);
+            Array.Copy(dataECG, a, dataForExamination, 0, n);
             
 
-            for (i = 0; i < b-a; i++) 
+            for (i = 0; i < b - a; i++) 
             {
                 dataForExaminationWithNoise[i] = dataForExamination[i] + noise[i];
-                dataGridView1.Rows[i].Cells[0].Value = dataForExaminationWithNoise[i];
             }
 
 
-            double minValue = findMin(dataForExaminationWithNoise); 
+            double minValue = findMin(dataForExaminationWithNoise);
+            
 
             chart1.ChartAreas[0].AxisY.Minimum = minValue;
             chart1.ChartAreas[0].AxisX.ScrollBar.IsPositionedInside = true;
             chart1.Series[0].Points.DataBindXY(step, dataForExaminationWithNoise);
+
+            wavletHaarForward();
 
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
             double minValue = findMin(dataForExamination);
+            double medianDij = 0;
+            double[] diff = new double[n / 2];
+            double medianOfDiff = 0;
+
+            int i = 0;
+
+            dij = bubbleSort(dij);
+            medianDij = median(dij);
+
+            for (i = 0; i < n/2; i++) 
+            {
+                diff[i] = Math.Abs(dij[i] - medianDij);
+            
+            }
+
+            diff = bubbleSort(diff);
+            medianOfDiff = median(diff);
+
+            R_2 = medianOfDiff / 0.6475;
+            T = R_2 * Math.Sqrt(2*Math.Log(n));
+
+            label9.Text = "" + Math.Round(R_2, 4);
+            label10.Text = "" + Math.Round(T, 4);
+
+            wavletInversHard = hardThreshold(T, wavlet);
+            wavletHaartInverse(wavletInversHard);
+
+            feelTable(wavlet, dij, dataForExaminationWithNoise, deNoisedSignalHard);
 
             chart2.ChartAreas[0].AxisY.Minimum = minValue;
             chart2.ChartAreas[0].AxisX.ScrollBar.IsPositionedInside = true;
             chart2.Series[0].Points.DataBindXY(step, dataForExamination);
+
+            chart3.ChartAreas[0].AxisY.Minimum = minValue;
+            chart3.ChartAreas[0].AxisX.ScrollBar.IsPositionedInside = true;
+            chart3.Series[0].Points.DataBindXY(step, deNoisedSignalHard);
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            //тестовое значение значение хаара 
-            int i = 0;
-            double[] waveletArray = new double[dataForExamination.Length];
-
-            dataGridView2.RowCount = dataForExamination.Length;
-            dataGridView2.ColumnCount = 1;
-
-            Array.Copy(dataForExamination, 0, waveletArray, 0, dataForExamination.Length);
-
-            IWavelet wavelet = new Accord.Math.Wavelets.Haar(m);
-            WaveletTransform target = new WaveletTransform(wavelet);
-            wavelet.Forward(waveletArray);
-
-            for (i = 0; i < waveletArray.Length; i++)
-            {
-                dataGridView2.Rows[i].Cells[0].Value = waveletArray[i];
-            }
-        }
+        
     }
 }
