@@ -19,22 +19,28 @@ namespace Analyz_EKG
 {
     public partial class Form1 : Form
     {
-        string csv_file_path = @"C:\Users\Marina\Desktop\диплом\ECG_Analysis\Analyz_EKG\data.csv";
-        int[] dataECG;
+        //шлях до файлу
+        string csv_file_path = @"C:\Users\Marina\Desktop\диплом\ECG_Analysis\Analyz_EKG\ecg_data_1.csv";
+        double[] dataECG; // дані з цсв
 
         double[] dataForExamination; //обрані 500 точок
-        double[] dataForExaminationWithNoise; // сигнал із шумом
+
         double[] dij;
 
-        double R_2;
-        double T;
+        double R_2; // поріг шумур
+        double T; // рівень шуму
 
-        int[] step;
-        double[] wavlet;
-        double[] wavletInversHard;
-        double[] wavletInversSoft;
-        double[] deNoisedSignalHard;
-        double[] deNoisedSignalSoft;
+        int[] step; // час
+
+        double[] wavlet; 
+        double[] wavletInversHard; // вейвлет для жорсткого порогу 
+        double[] wavletInversSoft; // вейвлет для м'якого порогу 
+
+        double[] deNoisedSignalHard; // сигнал для жорсткого порогу
+        double[] deNoisedSignalSoft; // сигнал для м'якого порогу
+
+        double SNRsoft = 0; //показник шум до сигналу для м'якого порогу
+        double SNRhard = 0; //показник шум до сигналу для жорсткого порогу
 
         static int n = 500; // к-во точек
         int m = 4; //уровень дистуктеризации
@@ -42,16 +48,52 @@ namespace Analyz_EKG
         public Form1()
         {
             InitializeComponent();
+            deleteNoise.Visible = false;
+            hideElement();
         }
- 
-        public int[] readECGData() 
+
+        public void hideElement()
         {
-            int[] readRezults;
+            dataGridView1.Visible = false;
+            chart2.Visible = false;
+            chart3.Visible = false;
+            label2.Visible = false;
+            label3.Visible = false;
+            label4.Visible = false;
+            label5.Visible = false;
+            label6.Visible = false;
+            label7.Visible = false;
+            label8.Visible = false;
+            label9.Visible = false;
+            label10.Visible = false;
+            label11.Visible = false;
+        }
+
+        public void showElement()
+        { 
+            dataGridView1.Visible = true;
+            chart2.Visible = true;
+            chart3.Visible = true;
+            label2.Visible = true;
+            label3.Visible = true;
+            label4.Visible = true;
+            label5.Visible = true;
+            label6.Visible = true;
+            label7.Visible = true;
+            label8.Visible = true;
+            label9.Visible = true;
+            label10.Visible = true;
+            label11.Visible = true;
+        }
+
+        public double[] readECGData() 
+        {
+            double[] readRezults;
             string[] stringSeparators = new string[] { "\r\n" };
 
             StreamReader readfile = new StreamReader(csv_file_path);
             string data = readfile.ReadToEnd();
-            readRezults = data.Split(stringSeparators, StringSplitOptions.None).Select(x => int.Parse(x)).ToArray();
+            readRezults = data.Split(stringSeparators, StringSplitOptions.None).Select(x => double.Parse(x)).ToArray();
 
             
             return readRezults;
@@ -82,7 +124,7 @@ namespace Analyz_EKG
             {
                 for (int j = i + 1; j < array.Length; j++)
                 {
-                    if (array[i] > array[j])
+                    if (array[i] < array[j])
                     {
                         temp = array[i];
                         array[i] = array[j];
@@ -97,6 +139,30 @@ namespace Analyz_EKG
         public double median(double[] array)
         {
             return array[array.Length/2];
+        }
+
+        public double dispersion(double[] array)
+        {
+            double despersionArray = 0;
+            double summ = 0;
+            double average = 0;
+
+            int i = 0;
+
+            for (i = 0; i < array.Length; i++) 
+            {
+                summ += array[i];
+            }
+
+            average = summ / array.Length;
+
+            for (i = 0; i < array.Length; i++) 
+            {
+                despersionArray += Math.Pow((array[i] - average), 2)/ array.Length;
+            }
+
+            return despersionArray;
+        
         }
 
         public void feelTable(double[] wavlet, double[] dij, double[] signal, double[] denoiseHard, double[] denoiseSoft)
@@ -142,7 +208,7 @@ namespace Analyz_EKG
             wavlet = new double[n];
             dij = new double[n/2];
 
-            Array.Copy(dataForExaminationWithNoise, 0, wavlet, 0, dataForExaminationWithNoise.Length);
+            Array.Copy(dataForExamination, 0, wavlet, 0, dataForExamination.Length);
             
             IWavelet wavelet = new Accord.Math.Wavelets.Haar(m);
             WaveletTransform target = new WaveletTransform(wavelet);
@@ -173,113 +239,112 @@ namespace Analyz_EKG
 
         public double[] hardThreshold(double T, double[] array)
         {
-            List<double> result = new List<double>();
             int i = 0;
 
-            for (i = 0; i < array.Length; i++) {
-                if (array[i] >= T) 
+            for (i = 0; i < array.Length; i++)
+            {
+                if ( Math.Abs(array[i]) < T) 
                 {
-                    result.Add(array[i]);
+                    array[i] = 0;
                 }
             
             }
 
-            return result.ToArray();
+            return array;
         
         }
 
         public double[] softThreshold(double T, double[] array)
         {
-            List<double> result = new List<double>();
             int i = 0;
 
             for (i = 0; i < array.Length; i++)
             {
-                if (array[i] >= T)
+                if (Math.Abs(array[i]) >= T)
                 {
-                    result.Add(Math.Abs(array[i]) - T);
+                    array[i] =  Math.Abs(array[i]) - Math.Sign(array[i]) * T;
                 }
 
                 else
                 {
-                    result.Add(array[i]);
+                    array[i] = 0;
                 }
 
             }
 
-            return result.ToArray();
+            return array;
 
         }
 
-        public double[] filterArray(double[] array)
+        public double SNR(double[] signal, double[] signalWithNoise)
         {
-            List<double> result = new List<double>();
+            double SNRvalue = 0;
+
             int i = 0;
+            int len = signal.Length;
 
-            for (i = 0; i < array.Length; i++)
+            for (i=0; i < len; i++)
             {
-                if (array[i] > 0)
-                {
-                    result.Add(array[i]);
-                }
-
+                SNRvalue = Math.Pow(signalWithNoise[i], 2) / Math.Pow(signalWithNoise[i] - signal[i], 2);
             }
 
-            return result.ToArray();
+            SNRvalue = 10 * Math.Log10(SNRvalue);
+
+            return SNRvalue;
+
         }
 
         private void generateDataBtn_Click_1(object sender, EventArgs e)
         {
+            hideElement();
+
             Random randomNum = new Random();
             
             int j = 0;
-            int a = randomNum.Next(0, 94500);
+            int a = randomNum.Next(0, 2000);
             int b = a + n;
             int i = 0;
 
             double[] noise = new double[n];
             dataForExamination = new double[n];
-            dataForExaminationWithNoise = new double[n];
-
 
             step = new int[n];
             
             for (i = a; i < b; i++)
             {
                 step[j] = i;
-                noise[j] = (randomNum.Next(500, 1000) - 0.5)* randomNum.Next(0, 3);
+                noise[j] = randomNum.Next(0, 3) - 0.5;
                 j++;
             }
 
 
             dataECG = readECGData();
             Array.Copy(dataECG, a, dataForExamination, 0, n);
-            
 
-            for (i = 0; i < b - a; i++) 
-            {
-                dataForExaminationWithNoise[i] = dataForExamination[i] + noise[i];
-            }
-
-
-            double minValue = findMin(dataForExaminationWithNoise);
-            
+            double minValue = findMin(dataForExamination);
 
             chart1.ChartAreas[0].AxisY.Minimum = minValue;
-            chart1.ChartAreas[0].AxisX.ScrollBar.IsPositionedInside = true;
-            chart1.Series[0].Points.DataBindXY(step, dataForExaminationWithNoise);
+            chart1.Series[0].Points.DataBindXY(step, dataForExamination);
 
             wavletHaarForward();
+            deleteNoise.Visible = true;
 
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            dataGridView1.Visible = true;
+            chart2.Visible = true;
+            chart3.Visible = true;
+
             double minValue = findMin(dataForExamination);
             double medianDij = 0;
+
             double[] diff = new double[n / 2];
+
             double medianOfDiff = 0;
-            
+            double dispersionSignal;
+
             int i = 0;
 
             dij = bubbleSort(dij);
@@ -288,16 +353,18 @@ namespace Analyz_EKG
             for (i = 0; i < n/2; i++) 
             {
                 diff[i] = Math.Abs(dij[i] - medianDij);
-            
             }
 
             diff = bubbleSort(diff);
             medianOfDiff = median(diff);
 
             R_2 = medianOfDiff / 0.6475;
-            T = R_2 * Math.Sqrt(2*Math.Log(n));
 
-            label9.Text = "" + Math.Round(R_2, 4);
+            dispersionSignal = dispersion(dataForExamination);
+
+            T = dispersionSignal * Math.Sqrt(2*Math.Log(n));
+
+            label9.Text = "" + Math.Round(dispersionSignal, 4);
             label10.Text = "" + Math.Round(T, 4);
 
             wavletInversHard = hardThreshold(T, wavlet);
@@ -306,32 +373,26 @@ namespace Analyz_EKG
             wavletInversSoft = softThreshold(T, wavlet);
             wavletHaartInverseSoft(wavletInversSoft);
 
-            feelTable(wavlet, dij, dataForExaminationWithNoise, deNoisedSignalHard, deNoisedSignalSoft);
+            SNRsoft = SNR(deNoisedSignalSoft, dataForExamination);
+            SNRhard = SNR(deNoisedSignalHard, dataForExamination);
 
-            double[] filtereddeNoisedHard = filterArray(deNoisedSignalHard);
-            int[] stepForDenoised = new int[filtereddeNoisedHard.Length];
-            
-            for (i = 0; i < filtereddeNoisedHard.Length; i++) 
-            {
-                stepForDenoised[i] = step[i];
-            }
+            label7.Text = "" + Math.Round(SNRhard, 4);
+            label11.Text = "" + Math.Round(SNRsoft, 4);
+
+            feelTable(wavlet, dij, dataForExamination, deNoisedSignalHard, deNoisedSignalSoft);
+
+            minValue = findMin(deNoisedSignalHard);
 
             chart2.ChartAreas[0].AxisY.Minimum = minValue;
-            chart2.ChartAreas[0].AxisX.ScrollBar.IsPositionedInside = true;
-            chart2.Series[0].Points.DataBindXY(stepForDenoised, filtereddeNoisedHard);
+            chart2.Series[0].Points.DataBindXY(step, deNoisedSignalHard);
 
-
-            stepForDenoised = new int[deNoisedSignalSoft.Length];
-            
-            double[] filtereddeNoisedSoft = filterArray(deNoisedSignalSoft);
-            for (i = 0; i < filtereddeNoisedSoft.Length; i++)
-            {
-                stepForDenoised[i] = step[i];
-            }
+            minValue = findMin(deNoisedSignalSoft);
 
             chart3.ChartAreas[0].AxisY.Minimum = minValue;
-            chart3.ChartAreas[0].AxisX.ScrollBar.IsPositionedInside = true;
-            chart3.Series[0].Points.DataBindXY(stepForDenoised, filtereddeNoisedSoft);
+            chart3.Series[0].Points.DataBindXY(step, deNoisedSignalSoft);
+
+            deleteNoise.Visible = false;
+            showElement();
 
         }
 
