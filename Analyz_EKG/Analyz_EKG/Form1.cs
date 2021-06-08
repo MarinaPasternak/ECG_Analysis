@@ -32,7 +32,7 @@ namespace Analyz_EKG
 
         int[] step; // час
 
-        double[] wavlet; 
+        double[] wavlet;
         double[] wavletInversHard; // вейвлет для жорсткого порогу 
         double[] wavletInversSoft; // вейвлет для м'якого порогу 
 
@@ -43,6 +43,7 @@ namespace Analyz_EKG
         double SNRhard = 0; //показник шум до сигналу для жорсткого порогу
 
         static int n = 500; // к-во точек
+        static int n2 = 100; // к-во точек
         int m = 4; //уровень дистуктеризации
 
         public Form1()
@@ -55,8 +56,12 @@ namespace Analyz_EKG
         public void hideElement()
         {
             dataGridView1.Visible = false;
+
             chart2.Visible = false;
             chart3.Visible = false;
+            chart5.Visible = false;
+            chart6.Visible = false;
+
             label2.Visible = false;
             label3.Visible = false;
             label4.Visible = false;
@@ -67,13 +72,19 @@ namespace Analyz_EKG
             label9.Visible = false;
             label10.Visible = false;
             label11.Visible = false;
+            label13.Visible = false;
+            label14.Visible = false;
         }
 
         public void showElement()
-        { 
+        {
             dataGridView1.Visible = true;
+
             chart2.Visible = true;
             chart3.Visible = true;
+            chart5.Visible = true;
+            chart6.Visible = true;
+
             label2.Visible = true;
             label3.Visible = true;
             label4.Visible = true;
@@ -84,9 +95,11 @@ namespace Analyz_EKG
             label9.Visible = true;
             label10.Visible = true;
             label11.Visible = true;
+            label13.Visible = true;
+            label14.Visible = true;
         }
 
-        public double[] readECGData() 
+        public double[] readECGData()
         {
             double[] readRezults;
             string[] stringSeparators = new string[] { "\r\n" };
@@ -95,7 +108,7 @@ namespace Analyz_EKG
             string data = readfile.ReadToEnd();
             readRezults = data.Split(stringSeparators, StringSplitOptions.None).Select(x => double.Parse(x)).ToArray();
 
-            
+
             return readRezults;
         }
 
@@ -107,7 +120,8 @@ namespace Analyz_EKG
 
             for (i = 0; i < lengthArray; i++)
             {
-                if (numsArray[i] <= min) {
+                if (numsArray[i] <= min)
+                {
                     min = numsArray[i];
                 }
             }
@@ -115,7 +129,7 @@ namespace Analyz_EKG
             return min;
         }
 
-        public double[] bubbleSort(double[] array) 
+        public double[] bubbleSort(double[] array)
         {
             double temp;
             int i = 0;
@@ -138,7 +152,7 @@ namespace Analyz_EKG
 
         public double median(double[] array)
         {
-            return array[array.Length/2];
+            return array[array.Length / 2];
         }
 
         public double dispersion(double[] array)
@@ -149,20 +163,20 @@ namespace Analyz_EKG
 
             int i = 0;
 
-            for (i = 0; i < array.Length; i++) 
+            for (i = 0; i < array.Length; i++)
             {
                 summ += array[i];
             }
 
             average = summ / array.Length;
 
-            for (i = 0; i < array.Length; i++) 
+            for (i = 0; i < array.Length; i++)
             {
-                despersionArray += Math.Pow((array[i] - average), 2)/ array.Length;
+                despersionArray += Math.Pow((array[i] - average), 2) / array.Length;
             }
 
             return despersionArray;
-        
+
         }
 
         public void feelTable(double[] wavlet, double[] dij, double[] signal, double[] denoiseHard, double[] denoiseSoft)
@@ -203,21 +217,21 @@ namespace Analyz_EKG
 
         }
 
-        public void wavletHaarForward() 
+        public void wavletHaarForward()
         {
             wavlet = new double[n];
-            dij = new double[n/2];
+            dij = new double[n / 2];
 
             Array.Copy(dataForExamination, 0, wavlet, 0, dataForExamination.Length);
-            
+
             IWavelet wavelet = new Accord.Math.Wavelets.Haar(m);
             WaveletTransform target = new WaveletTransform(wavelet);
             wavelet.Forward(wavlet);
 
-            Array.Copy(wavlet, n/2, dij, 0, dij.Length/2);
+            Array.Copy(wavlet, n / 2, dij, 0, dij.Length / 2);
         }
 
-        public void wavletHaartInverseHard(double[] w) 
+        public void wavletHaartInverseHard(double[] w)
         {
             deNoisedSignalHard = new double[w.Length];
 
@@ -243,15 +257,15 @@ namespace Analyz_EKG
 
             for (i = 0; i < array.Length; i++)
             {
-                if ( Math.Abs(array[i]) < T) 
+                if (Math.Abs(array[i]) < T)
                 {
                     array[i] = 0;
                 }
-            
+
             }
 
             return array;
-        
+
         }
 
         public double[] softThreshold(double T, double[] array)
@@ -262,7 +276,7 @@ namespace Analyz_EKG
             {
                 if (Math.Abs(array[i]) >= T)
                 {
-                    array[i] =  Math.Abs(array[i]) - Math.Sign(array[i]) * T;
+                    array[i] = Math.Abs(array[i]) - Math.Sign(array[i]) * T;
                 }
 
                 else
@@ -283,7 +297,7 @@ namespace Analyz_EKG
             int i = 0;
             int len = signal.Length;
 
-            for (i=0; i < len; i++)
+            for (i = 0; i < len; i++)
             {
                 SNRvalue = Math.Pow(signalWithNoise[i], 2) / Math.Pow(signalWithNoise[i] - signal[i], 2);
             }
@@ -299,32 +313,39 @@ namespace Analyz_EKG
             hideElement();
 
             Random randomNum = new Random();
-            
+
             int j = 0;
             int a = randomNum.Next(0, 2000);
             int b = a + n;
             int i = 0;
 
-            double[] noise = new double[n];
+            double[] dataSubset = new double[n2];
+            int[] stepForSubset = new int[n2];
             dataForExamination = new double[n];
 
             step = new int[n];
-            
+
             for (i = a; i < b; i++)
             {
                 step[j] = i;
-                noise[j] = randomNum.Next(0, 3) - 0.5;
                 j++;
             }
 
 
             dataECG = readECGData();
             Array.Copy(dataECG, a, dataForExamination, 0, n);
+            Array.Copy(dataForExamination, 0, dataSubset, 0, n2);
+            Array.Copy(step, 0, stepForSubset, 0, n2);
 
             double minValue = findMin(dataForExamination);
 
             chart1.ChartAreas[0].AxisY.Minimum = minValue;
             chart1.Series[0].Points.DataBindXY(step, dataForExamination);
+
+            minValue = findMin(dataSubset);
+
+            chart4.ChartAreas[0].AxisY.Minimum = minValue;
+            chart4.Series[0].Points.DataBindXY(stepForSubset, dataSubset);
 
             wavletHaarForward();
             deleteNoise.Visible = true;
@@ -345,12 +366,18 @@ namespace Analyz_EKG
             double medianOfDiff = 0;
             double dispersionSignal;
 
+            double[] denoisedSoftSubset = new double[n2];
+            double[] denoisedHardSubset = new double[n2];
+
+            int[] denoisedSoftSubsetStep = new int[n2];
+            int[] denoisedHardSubsetStep = new int[n2];
+
             int i = 0;
 
             dij = bubbleSort(dij);
             medianDij = median(dij);
 
-            for (i = 0; i < n/2; i++) 
+            for (i = 0; i < n / 2; i++)
             {
                 diff[i] = Math.Abs(dij[i] - medianDij);
             }
@@ -362,7 +389,7 @@ namespace Analyz_EKG
 
             dispersionSignal = dispersion(dataForExamination);
 
-            T = dispersionSignal * Math.Sqrt(2*Math.Log(n));
+            T = dispersionSignal * Math.Sqrt(2 * Math.Log(n));
 
             label9.Text = "" + Math.Round(dispersionSignal, 4);
             label10.Text = "" + Math.Round(T, 4);
@@ -381,6 +408,12 @@ namespace Analyz_EKG
 
             feelTable(wavlet, dij, dataForExamination, deNoisedSignalHard, deNoisedSignalSoft);
 
+            Array.Copy(deNoisedSignalHard, 0, denoisedHardSubset, 0, n2);
+            Array.Copy(step, 0, denoisedHardSubsetStep, 0, n2);
+
+            Array.Copy(deNoisedSignalSoft, 0, denoisedSoftSubset, 0, n2);
+            Array.Copy(step, 0, denoisedSoftSubsetStep, 0, n2);
+
             minValue = findMin(deNoisedSignalHard);
 
             chart2.ChartAreas[0].AxisY.Minimum = minValue;
@@ -391,11 +424,21 @@ namespace Analyz_EKG
             chart3.ChartAreas[0].AxisY.Minimum = minValue;
             chart3.Series[0].Points.DataBindXY(step, deNoisedSignalSoft);
 
+            minValue = findMin(denoisedHardSubset);
+
+            chart5.ChartAreas[0].AxisY.Minimum = minValue;
+            chart5.Series[0].Points.DataBindXY(denoisedHardSubsetStep, denoisedHardSubset);
+
+            minValue = findMin(denoisedSoftSubset);
+
+            chart6.ChartAreas[0].AxisY.Minimum = minValue;
+            chart6.Series[0].Points.DataBindXY(denoisedSoftSubsetStep, denoisedSoftSubset);
+
             deleteNoise.Visible = false;
             showElement();
 
         }
 
-        
+     
     }
 }
